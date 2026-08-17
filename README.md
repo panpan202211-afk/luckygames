@@ -5,8 +5,8 @@ A colorful match-3 game built with Flutter:
 - 3 difficulty maps with 10 levels each: Easy, Hard, and Hell
 - 5 unique candy designs
 - Animated swaps, matches, cascades, and combos
-- Moves, 10x target scores, stars, and level progression
-- In-session progress tracking across all 30 levels
+- Moves, 10x target scores, stars, and persistent level progression
+- Distinct map mechanics: power combos, breakable ice, and a star bomb timer
 
 ## Run locally
 
@@ -34,5 +34,5 @@ Use the **App SDK Token**, not an Airbridge API token. Placeholder or empty cred
 Gighub
 
 git add .
-git commit -m "1.0.6"
+git commit -m "1.0.7"
 git push

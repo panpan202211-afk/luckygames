@@ -1,10 +1,14 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'privacy_policy_page.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await gameProgress.load();
   runApp(const LuckyGamesApp());
 }
 
@@ -15,7 +19,7 @@ class LuckyGamesApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Candy Clash',
+      title: 'Lucky Games',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFFFF5A7A),
@@ -29,13 +33,35 @@ class LuckyGamesApp extends StatelessWidget {
 }
 
 class GameProgress extends ChangeNotifier {
+  static const _unlockedKey = 'unlocked_level';
+  static const _starsKey = 'level_stars';
+
   int unlockedLevel = 1;
   final Map<int, int> stars = {};
 
-  void complete(int level, int earnedStars) {
+  Future<void> load() async {
+    final preferences = await SharedPreferences.getInstance();
+    unlockedLevel = preferences.getInt(_unlockedKey)?.clamp(1, 30) ?? 1;
+    stars.clear();
+    for (final entry in preferences.getStringList(_starsKey) ?? const []) {
+      final parts = entry.split(':');
+      if (parts.length != 2) continue;
+      final level = int.tryParse(parts[0]);
+      final value = int.tryParse(parts[1]);
+      if (level != null && value != null) stars[level] = value.clamp(0, 3);
+    }
+  }
+
+  Future<void> complete(int level, int earnedStars) async {
     stars[level] = max(stars[level] ?? 0, earnedStars);
     unlockedLevel = max(unlockedLevel, min(30, level + 1));
     notifyListeners();
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setInt(_unlockedKey, unlockedLevel);
+    await preferences.setStringList(
+      _starsKey,
+      stars.entries.map((entry) => '${entry.key}:${entry.value}').toList(),
+    );
   }
 }
 
@@ -136,7 +162,7 @@ class _HomePageState extends State<HomePage>
                   ),
                   const SizedBox(height: 24),
                   const Text(
-                    'Candy Clash',
+                    'Lucky Games',
                     style: TextStyle(
                       fontSize: 42,
                       fontWeight: FontWeight.w900,
@@ -215,12 +241,12 @@ class MapTheme {
 }
 
 const mapThemes = [
-  MapTheme('EASY', 'Sunny Meadows · Relaxed challenge', Icons.park_rounded,
+  MapTheme('EASY', 'Sunny Meadows · Learn power combos', Icons.park_rounded,
       [Color(0xFF8DE2A5), Color(0xFFE8FFD5)]),
-  MapTheme('HARD', 'Frozen Peaks · Tough challenge', Icons.ac_unit_rounded,
+  MapTheme('HARD', 'Frozen Peaks · Break every ice tile', Icons.ac_unit_rounded,
       [Color(0xFF83D7F4), Color(0xFFE5F9FF)]),
-  MapTheme('HELL', 'Inferno Citadel · Extreme challenge', Icons.castle_rounded,
-      [Color(0xFFC99BFF), Color(0xFFFFDAFA)]),
+  MapTheme('HELL', 'Inferno Citadel · Defuse the star bomb',
+      Icons.castle_rounded, [Color(0xFFC99BFF), Color(0xFFFFDAFA)]),
 ];
 
 class MapPage extends StatefulWidget {
@@ -374,18 +400,29 @@ class LevelMap extends StatelessWidget {
 enum CandyType { heart, star, flower, moon, drop }
 
 class LevelConfig {
-  const LevelConfig({required this.moves, required this.target});
+  const LevelConfig({
+    required this.moves,
+    required this.target,
+    required this.iceTiles,
+    required this.bombTurns,
+  });
   final int moves;
   final int target;
+  final int iceTiles;
+  final int bombTurns;
 
   factory LevelConfig.forLevel(int level) {
     final local = (level - 1) % 10;
     final map = (level - 1) ~/ 10;
-    const startingMoves = [28, 22, 17];
+    // Targets remain 10x. Extra moves and power rewards make the higher goals
+    // achievable without changing the base 50 points earned per candy.
+    const startingMoves = [48, 40, 32];
     final baseTarget = 650 + (level - 1) * 150;
     return LevelConfig(
-      moves: max(10, startingMoves[map] - local ~/ 2),
+      moves: startingMoves[map] - local ~/ 2,
       target: baseTarget * 10,
+      iceTiles: map == 1 ? 6 + local ~/ 2 : 0,
+      bombTurns: map == 2 ? max(7, 11 - local ~/ 3) : 0,
     );
   }
 }
@@ -408,14 +445,54 @@ class _GamePageState extends State<GamePage> {
   int _score = 0;
   int? _selected;
   Set<int> _clearing = {};
+  Set<int> _ice = {};
   bool _busy = false;
   bool _ended = false;
   String _comboText = '';
+  int _power = 0;
+  int _bombTurns = 0;
 
   @override
   void initState() {
     super.initState();
     _startLevel();
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _showTutorialIfNeeded());
+  }
+
+  Future<void> _showTutorialIfNeeded() async {
+    final preferences = await SharedPreferences.getInstance();
+    if (!mounted || (preferences.getBool('tutorial_seen') ?? false)) return;
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        title: const Text('HOW TO PLAY',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontWeight: FontWeight.w900)),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('• Tap two neighboring candies to swap them.'),
+            SizedBox(height: 8),
+            Text('• Match 4 or 5 for power bonuses.'),
+            SizedBox(height: 8),
+            Text('• Fill the orange meter to unleash a Sugar Storm.'),
+            SizedBox(height: 8),
+            Text('• Frozen Peaks has ice. Inferno stars reset the timer.'),
+          ],
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('LET\'S PLAY'),
+          ),
+        ],
+      ),
+    );
+    await preferences.setBool('tutorial_seen', true);
   }
 
   void _startLevel() {
@@ -427,6 +504,8 @@ class _GamePageState extends State<GamePage> {
     _busy = false;
     _ended = false;
     _comboText = '';
+    _power = 0;
+    _bombTurns = _config.bombTurns;
     _board = List.filled(rows * cols, 0);
     for (var i = 0; i < _board.length; i++) {
       var value = _random.nextInt(CandyType.values.length);
@@ -435,6 +514,13 @@ class _GamePageState extends State<GamePage> {
       }
       _board[i] = value;
     }
+    _ice = _randomPositions(_config.iceTiles);
+  }
+
+  Set<int> _randomPositions(int count) {
+    final positions = List<int>.generate(rows * cols, (index) => index)
+      ..shuffle(_random);
+    return positions.take(count).toSet();
   }
 
   bool _wouldCreateInitialMatch(int index, int value) {
@@ -492,6 +578,12 @@ class _GamePageState extends State<GamePage> {
       return;
     }
     _moves--;
+    if (_config.bombTurns > 0) {
+      final matchedStar =
+          matches.any((cell) => _board[cell] == CandyType.star.index);
+      _bombTurns = matchedStar ? _config.bombTurns : max(0, _bombTurns - 1);
+    }
+    HapticFeedback.selectionClick();
     await _resolveBoard(matches);
     if (!mounted) return;
     setState(() => _busy = false);
@@ -537,10 +629,30 @@ class _GamePageState extends State<GamePage> {
     var combo = 1;
     var current = matches;
     while (current.isNotEmpty && mounted) {
+      final matchSize = current.length;
+      var bonus = matchSize >= 5 ? 2000 : (matchSize == 4 ? 750 : 0);
+      _power = min(100, _power + matchSize * 9);
+      var sugarStorm = false;
+      if (_power >= 100) {
+        final available = List<int>.generate(rows * cols, (index) => index)
+            .where((index) => !current.contains(index))
+            .toList()
+          ..shuffle(_random);
+        current = {...current, ...available.take(14)};
+        _power = 0;
+        bonus += 1000;
+        sugarStorm = true;
+        HapticFeedback.mediumImpact();
+      }
       setState(() {
         _clearing = current;
-        _comboText = combo > 1 ? '${combo}x COMBO!' : '';
-        _score += current.length * 50 * combo;
+        _comboText = sugarStorm
+            ? 'SUGAR STORM!'
+            : bonus > 0
+                ? '+$bonus POWER!'
+                : (combo > 1 ? '${combo}x COMBO!' : '');
+        _score += current.length * 50 * combo + bonus;
+        _ice.removeAll(current);
       });
       await Future<void>.delayed(const Duration(milliseconds: 360));
       if (!mounted) return;
@@ -576,12 +688,12 @@ class _GamePageState extends State<GamePage> {
   }
 
   Future<void> _checkEnd() async {
-    if (_score >= _config.target) {
+    if (_score >= _config.target && _ice.isEmpty) {
       _ended = true;
       final stars = _moves >= _config.moves * .5 ? 3 : (_moves > 0 ? 2 : 1);
-      gameProgress.complete(widget.level, stars);
+      await gameProgress.complete(widget.level, stars);
       await _showResult(won: true, stars: stars);
-    } else if (_moves <= 0) {
+    } else if (_moves <= 0 || (_config.bombTurns > 0 && _bombTurns <= 0)) {
       _ended = true;
       await _showResult(won: false, stars: 0);
     }
@@ -652,6 +764,13 @@ class _GamePageState extends State<GamePage> {
         title: Text('${map.name} · LEVEL ${widget.level}',
             style: const TextStyle(fontWeight: FontWeight.w900)),
         centerTitle: true,
+        actions: [
+          IconButton(
+            tooltip: 'Restart level',
+            onPressed: _busy ? null : () => setState(_startLevel),
+            icon: const Icon(Icons.restart_alt_rounded),
+          ),
+        ],
       ),
       body: SafeArea(
         child: Column(
@@ -687,6 +806,39 @@ class _GamePageState extends State<GamePage> {
                     minHeight: 10,
                     backgroundColor: Colors.white70,
                     color: const Color(0xFFFFB52E)),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 9, 20, 0),
+              child: Row(
+                children: [
+                  const Icon(Icons.bolt_rounded,
+                      size: 18, color: Color(0xFFFF8A00)),
+                  const SizedBox(width: 5),
+                  Expanded(
+                    child: LinearProgressIndicator(
+                      value: _power / 100,
+                      minHeight: 7,
+                      borderRadius: BorderRadius.circular(8),
+                      backgroundColor: Colors.white70,
+                      color: const Color(0xFFFF8A00),
+                    ),
+                  ),
+                  if (_ice.isNotEmpty) ...[
+                    const SizedBox(width: 12),
+                    const Icon(Icons.ac_unit_rounded,
+                        size: 18, color: Color(0xFF2387C8)),
+                    Text(' ${_ice.length}',
+                        style: const TextStyle(fontWeight: FontWeight.w800)),
+                  ],
+                  if (_config.bombTurns > 0) ...[
+                    const SizedBox(width: 12),
+                    const Icon(Icons.timer_rounded,
+                        size: 18, color: Color(0xFFE34D59)),
+                    Text(' $_bombTurns',
+                        style: const TextStyle(fontWeight: FontWeight.w800)),
+                  ],
+                ],
               ),
             ),
             const SizedBox(height: 14),
@@ -735,21 +887,47 @@ class _GamePageState extends State<GamePage> {
                                             width: 3)
                                         : null,
                                   ),
-                                  child: AnimatedScale(
-                                    scale: clearing ? 0 : 1,
-                                    duration: const Duration(milliseconds: 330),
-                                    curve: Curves.easeInBack,
-                                    child: AnimatedRotation(
-                                      turns: clearing ? .35 : 0,
-                                      duration:
-                                          const Duration(milliseconds: 330),
-                                      child: _board[index] >= 0
-                                          ? CandyIcon(
-                                              type: CandyType
-                                                  .values[_board[index]],
-                                              size: 38)
-                                          : const SizedBox.shrink(),
-                                    ),
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      AnimatedScale(
+                                        scale: clearing ? 0 : 1,
+                                        duration:
+                                            const Duration(milliseconds: 330),
+                                        curve: Curves.easeInBack,
+                                        child: AnimatedRotation(
+                                          turns: clearing ? .35 : 0,
+                                          duration:
+                                              const Duration(milliseconds: 330),
+                                          child: _board[index] >= 0
+                                              ? CandyIcon(
+                                                  type: CandyType
+                                                      .values[_board[index]],
+                                                  size: 38)
+                                              : const SizedBox.shrink(),
+                                        ),
+                                      ),
+                                      if (_ice.contains(index))
+                                        IgnorePointer(
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: const Color(0x6659C8F5),
+                                              borderRadius:
+                                                  BorderRadius.circular(11),
+                                              border: Border.all(
+                                                  color: Colors.white70,
+                                                  width: 2),
+                                            ),
+                                            child: const Center(
+                                              child: Icon(
+                                                Icons.ac_unit_rounded,
+                                                color: Colors.white,
+                                                size: 18,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
                                   ),
                                 ),
                               );
@@ -783,10 +961,16 @@ class _GamePageState extends State<GamePage> {
                 }),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.only(bottom: 12),
-              child: Text('Swap neighboring candies to match 3 or more',
-                  style: TextStyle(color: Color(0xFF715C78), fontSize: 13)),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                _config.iceTiles > 0
+                    ? 'Reach the target and break every ice tile'
+                    : _config.bombTurns > 0
+                        ? 'Match a star before the timer reaches zero'
+                        : 'Match 4 or 5 candies to unleash power',
+                style: const TextStyle(color: Color(0xFF715C78), fontSize: 13),
+              ),
             ),
           ],
         ),
@@ -839,14 +1023,6 @@ class CandyIcon extends StatelessWidget {
     Color(0xFF42B7E9),
     Color(0xFF55C98B)
   ];
-  static const icons = [
-    Icons.favorite_rounded,
-    Icons.star_rounded,
-    Icons.local_florist_rounded,
-    Icons.dark_mode_rounded,
-    Icons.water_drop_rounded
-  ];
-
   @override
   Widget build(BuildContext context) {
     final index = type.index;
@@ -867,11 +1043,77 @@ class CandyIcon extends StatelessWidget {
                 offset: const Offset(0, 3))
           ],
         ),
-        child: Icon(icons[index],
-            color:
-                index == 1 ? Colors.white : Colors.white.withValues(alpha: .94),
-            size: size * .64),
+        child: CustomPaint(
+          painter: _CandyGlyphPainter(type),
+          size: Size.square(size * .64),
+        ),
       ),
     );
   }
+}
+
+class _CandyGlyphPainter extends CustomPainter {
+  const _CandyGlyphPainter(this.type);
+  final CandyType type;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: .95)
+      ..style = PaintingStyle.fill;
+    final w = size.width;
+    final h = size.height;
+    final center = Offset(w / 2, h / 2);
+
+    switch (type) {
+      case CandyType.heart:
+        final path = Path()
+          ..moveTo(w * .5, h * .84)
+          ..cubicTo(w * .39, h * .7, w * .12, h * .54, w * .16, h * .31)
+          ..cubicTo(w * .2, h * .08, w * .43, h * .12, w * .5, h * .29)
+          ..cubicTo(w * .57, h * .12, w * .8, h * .08, w * .84, h * .31)
+          ..cubicTo(w * .88, h * .54, w * .61, h * .7, w * .5, h * .84)
+          ..close();
+        canvas.drawPath(path, paint);
+      case CandyType.star:
+        final path = Path();
+        for (var i = 0; i < 10; i++) {
+          final angle = -pi / 2 + i * pi / 5;
+          final radius = i.isEven ? w * .38 : w * .17;
+          final point = center + Offset(cos(angle), sin(angle)) * radius;
+          i == 0
+              ? path.moveTo(point.dx, point.dy)
+              : path.lineTo(point.dx, point.dy);
+        }
+        canvas.drawPath(path..close(), paint);
+      case CandyType.flower:
+        for (var i = 0; i < 6; i++) {
+          final angle = i * pi / 3;
+          final petalCenter = center + Offset(cos(angle), sin(angle)) * w * .22;
+          canvas.drawCircle(petalCenter, w * .17, paint);
+        }
+        canvas.drawCircle(center, w * .16,
+            Paint()..color = CandyIcon.colors[CandyType.flower.index]);
+        canvas.drawCircle(center, w * .09, paint);
+      case CandyType.moon:
+        final path = Path()
+          ..fillType = PathFillType.evenOdd
+          ..addOval(Rect.fromCircle(center: center, radius: w * .34))
+          ..addOval(Rect.fromCircle(
+              center: Offset(w * .62, h * .39), radius: w * .29));
+        canvas.drawPath(path, paint);
+      case CandyType.drop:
+        final path = Path()
+          ..moveTo(w * .5, h * .1)
+          ..cubicTo(w * .38, h * .3, w * .2, h * .5, w * .2, h * .65)
+          ..cubicTo(w * .2, h * .91, w * .8, h * .91, w * .8, h * .65)
+          ..cubicTo(w * .8, h * .5, w * .62, h * .3, w * .5, h * .1)
+          ..close();
+        canvas.drawPath(path, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _CandyGlyphPainter oldDelegate) =>
+      oldDelegate.type != type;
 }

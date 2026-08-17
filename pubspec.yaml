@@ -1,7 +1,7 @@
 name: lucky_games
 description: A colorful three-map match-3 puzzle game.
 publish_to: "none"
-version: 1.0.1+2
+version: 1.0.2+3
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
@@ -11,6 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   http: 1.6.0
+  shared_preferences: ^2.5.3
   webview_flutter: 4.14.1
 
 dev_dependencies:

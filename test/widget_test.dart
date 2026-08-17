@@ -5,7 +5,7 @@ import 'package:lucky_games/privacy_policy_page.dart';
 void main() {
   testWidgets('home page opens the map', (tester) async {
     await tester.pumpWidget(const LuckyGamesApp());
-    expect(find.text('Candy Clash'), findsOneWidget);
+    expect(find.text('Lucky Games'), findsOneWidget);
     await tester.tap(find.text('PLAY NOW'));
     await tester.pumpAndSettle();
     expect(find.text('Adventure Maps'), findsOneWidget);
@@ -21,6 +21,9 @@ void main() {
         greaterThan(LevelConfig.forLevel(11).moves));
     expect(LevelConfig.forLevel(11).moves,
         greaterThan(LevelConfig.forLevel(21).moves));
+    expect(LevelConfig.forLevel(1).iceTiles, 0);
+    expect(LevelConfig.forLevel(11).iceTiles, greaterThan(0));
+    expect(LevelConfig.forLevel(21).bombTurns, greaterThan(0));
   });
 
   test('privacy API response resolves a validated HTTPS URL', () {

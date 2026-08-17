@@ -1,11 +1,11 @@
 {
-    "name": "lucky_games",
-    "short_name": "lucky_games",
+    "name": "Lucky Games",
+    "short_name": "Lucky Games",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "A colorful three-map match-3 adventure.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
