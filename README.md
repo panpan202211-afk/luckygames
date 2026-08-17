@@ -17,3 +17,9 @@ flutter run
 Flutter is installed at `D:\SDK\flutter` and added to the user PATH. Open a new terminal before using the `flutter` command.
 
 On Windows, double-click `run_web.bat` to preview the game in Chrome. Building the iOS version requires macOS with Xcode.
+
+Gighub
+
+git add .
+git commit -m "1.0.2"
+git push
