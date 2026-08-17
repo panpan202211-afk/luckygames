@@ -2,6 +2,8 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import 'privacy_policy_page.dart';
+
 void main() {
   runApp(const LuckyGamesApp());
 }
@@ -174,7 +176,23 @@ class _HomePageState extends State<HomePage>
                       ),
                     ),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const PrivacyPolicyPage(),
+                      ),
+                    ),
+                    icon: const Icon(Icons.privacy_tip_outlined, size: 19),
+                    label: const Text(
+                      'Privacy Policy',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
                   const Text('Tap two neighboring candies to swap',
                       style: TextStyle(color: Color(0xFF97657E))),
                   const Spacer(),

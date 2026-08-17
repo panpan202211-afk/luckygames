@@ -1,7 +1,7 @@
 name: lucky_games
 description: A colorful three-map match-3 puzzle game.
 publish_to: "none"
-version: 1.0.1+1
+version: 1.0.1+2
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
@@ -10,6 +10,8 @@ dependencies:
   airbridge_flutter_sdk: 4.10.0
   flutter:
     sdk: flutter
+  http: 1.6.0
+  webview_flutter: 4.14.1
 
 dev_dependencies:
   flutter_test:
@@ -19,4 +21,5 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - airbridge.json
     - img/icon-1024.png

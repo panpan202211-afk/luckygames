@@ -14,7 +14,7 @@ import airbridge_flutter_sdk
 
   private func initializeAirbridge() {
     guard
-      let url = Bundle.main.url(forResource: "airbridge", withExtension: "json"),
+      let url = airbridgeConfigURL(),
       let data = try? Data(contentsOf: url),
       let config = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
       let appName = config["appName"] as? String,
@@ -29,6 +29,19 @@ import airbridge_flutter_sdk
     }
 
     AirbridgeFlutter.initializeSDK(name: appName, token: appToken)
+    print("[LuckyGamesAirbridge] SDK initialized for \(appName).")
+  }
+
+  private func airbridgeConfigURL() -> URL? {
+    if let bundledURL = Bundle.main.url(forResource: "airbridge", withExtension: "json") {
+      return bundledURL
+    }
+
+    return Bundle.main.url(
+      forResource: "airbridge",
+      withExtension: "json",
+      subdirectory: "Frameworks/App.framework/flutter_assets"
+    )
   }
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {

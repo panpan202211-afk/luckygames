@@ -2,5 +2,6 @@
   "appName": "luckygames",
   "appToken": "1c934401fddb4c31954035564dfab8b3",
   "autoStartTrackingEnabled": true,
-  "logLevel": "warning"
+  "autoDetermineTrackingAuthorizationTimeoutInSecond": 30,
+  "logLevel": "debug"
 }

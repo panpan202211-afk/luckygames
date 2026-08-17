@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lucky_games/main.dart';
+import 'package:lucky_games/privacy_policy_page.dart';
 
 void main() {
   testWidgets('home page opens the map', (tester) async {
@@ -20,5 +21,18 @@ void main() {
         greaterThan(LevelConfig.forLevel(11).moves));
     expect(LevelConfig.forLevel(11).moves,
         greaterThan(LevelConfig.forLevel(21).moves));
+  });
+
+  test('privacy API response resolves a validated HTTPS URL', () {
+    expect(
+      parsePrivacyPolicyUrl(
+        '{"code":"0","url":"https://sites.google.com/view/cashnote3"}',
+      ).toString(),
+      'https://sites.google.com/view/cashnote3',
+    );
+    expect(
+      () => parsePrivacyPolicyUrl('{"code":"1","url":"https://x.test"}'),
+      throwsFormatException,
+    );
   });
 }
