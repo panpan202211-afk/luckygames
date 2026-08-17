@@ -114,11 +114,11 @@ class _HomePageState extends State<HomePage>
                 children: [
                   const Spacer(flex: 2),
                   Container(
-                    width: 118,
-                    height: 118,
+                    width: 132,
+                    height: 132,
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: .88),
-                      shape: BoxShape.circle,
+                      borderRadius: BorderRadius.circular(30),
                       boxShadow: const [
                         BoxShadow(
                             color: Color(0x33000000),
@@ -126,8 +126,11 @@ class _HomePageState extends State<HomePage>
                             offset: Offset(0, 10))
                       ],
                     ),
-                    child: const Center(
-                        child: CandyIcon(type: CandyType.star, size: 78)),
+                    clipBehavior: Clip.antiAlias,
+                    child: Image.asset(
+                      'img/icon-1024.png',
+                      fit: BoxFit.cover,
+                    ),
                   ),
                   const SizedBox(height: 24),
                   const Text(
