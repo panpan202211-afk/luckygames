@@ -37,5 +37,5 @@ Use the **App SDK Token**, not an Airbridge API token. Placeholder or empty cred
 Gighub
 
 git add .
-git commit -m "1.0.8"
+git commit -m "1.0.9"
 git push

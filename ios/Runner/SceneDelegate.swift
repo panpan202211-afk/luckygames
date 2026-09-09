@@ -6,6 +6,7 @@ import airbridge_flutter_sdk
 
 class SceneDelegate: FlutterSceneDelegate {
   private var hasStartedAirbridgeTracking = false
+  private var hasScheduledTrackingAuthorizationRequest = false
 
   override func scene(
     _ scene: UIScene,
@@ -34,16 +35,7 @@ class SceneDelegate: FlutterSceneDelegate {
     case .authorized:
       startAirbridgeTrackingIfNeeded()
     case .notDetermined:
-      ATTrackingManager.requestTrackingAuthorization { [weak self] status in
-        DispatchQueue.main.async {
-          print("[LuckyGamesAirbridge] ATT status: \(status.rawValue)")
-          if status == .authorized {
-            self?.startAirbridgeTrackingIfNeeded()
-          } else {
-            print("[LuckyGamesAirbridge] Tracking remains disabled because ATT permission was not granted.")
-          }
-        }
-      }
+      requestTrackingAuthorizationWhenReady()
     case .denied, .restricted:
       print("[LuckyGamesAirbridge] Tracking is disabled because ATT permission was not granted.")
     @unknown default:
@@ -76,6 +68,34 @@ class SceneDelegate: FlutterSceneDelegate {
       return ATTrackingManager.trackingAuthorizationStatus == .authorized
     }
     return true
+  }
+
+  private func requestTrackingAuthorizationWhenReady() {
+    guard !hasScheduledTrackingAuthorizationRequest else { return }
+    hasScheduledTrackingAuthorizationRequest = true
+
+    // Let the Flutter first frame become visible before presenting the system
+    // prompt. Presenting during the initial scene transition can be ignored.
+    DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+      guard let self = self else { return }
+      self.hasScheduledTrackingAuthorizationRequest = false
+
+      guard
+        UIApplication.shared.applicationState == .active,
+        ATTrackingManager.trackingAuthorizationStatus == .notDetermined
+      else { return }
+
+      ATTrackingManager.requestTrackingAuthorization { [weak self] status in
+        DispatchQueue.main.async {
+          print("[LuckyGamesAirbridge] ATT status: \(status.rawValue)")
+          if status == .authorized {
+            self?.startAirbridgeTrackingIfNeeded()
+          } else {
+            print("[LuckyGamesAirbridge] Tracking remains disabled because ATT permission was not granted.")
+          }
+        }
+      }
+    }
   }
 
   private func startAirbridgeTrackingIfNeeded() {
