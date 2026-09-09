@@ -4,15 +4,21 @@ import airbridge_flutter_sdk
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
+  private var hasInitializedAirbridge = false
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    initializeAirbridge()
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
-  private func initializeAirbridge() {
+  @discardableResult
+  func initializeAirbridgeIfNeeded() -> Bool {
+    if hasInitializedAirbridge {
+      return true
+    }
+
     guard
       let url = airbridgeConfigURL(),
       let data = try? Data(contentsOf: url),
@@ -25,11 +31,13 @@ import airbridge_flutter_sdk
       !appToken.hasPrefix("YOUR_")
     else {
       print("[LuckyGamesAirbridge] Credentials are not configured; attribution is disabled.")
-      return
+      return false
     }
 
     AirbridgeFlutter.initializeSDK(name: appName, token: appToken)
+    hasInitializedAirbridge = true
     print("[LuckyGamesAirbridge] SDK initialized for \(appName).")
+    return true
   }
 
   private func airbridgeConfigURL() -> URL? {

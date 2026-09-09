@@ -20,12 +20,15 @@ On Windows, double-click `run_web.bat` to preview the game in Chrome. Building t
 
 ## Airbridge attribution
 
-The official Airbridge Flutter SDK is initialized on both Android and iOS before Flutter starts. Set the credentials from Airbridge Dashboard **Settings > Tokens** in the root-level `airbridge.json` file:
+The official Airbridge Flutter SDK is configured from the root-level `airbridge.json` file. On iOS 14 and later, the app requests App Tracking Transparency permission and does not initialize or start Airbridge unless the user grants permission. On older iOS versions and Android, platform-specific startup behavior applies.
+
+Set the credentials from Airbridge Dashboard **Settings > Tokens**:
 
 ```json
 {
   "appName": "YOUR_AIRBRIDGE_APP_NAME",
-  "appToken": "YOUR_AIRBRIDGE_APP_SDK_TOKEN"
+  "appToken": "YOUR_AIRBRIDGE_APP_SDK_TOKEN",
+  "autoStartTrackingEnabled": false
 }
 ```
 
@@ -34,5 +37,5 @@ Use the **App SDK Token**, not an Airbridge API token. Placeholder or empty cred
 Gighub
 
 git add .
-git commit -m "1.0.7"
+git commit -m "1.0.8"
 git push
