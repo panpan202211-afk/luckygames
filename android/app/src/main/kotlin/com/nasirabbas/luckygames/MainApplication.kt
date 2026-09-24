@@ -1,4 +1,4 @@
-package com.luckygames.lucky_games
+package com.nasirabbas.luckygames
 
 import android.app.Application
 import android.util.Log
@@ -26,6 +26,7 @@ class MainApplication : Application() {
         }
 
         AirbridgeFlutter.initializeSDK(this, appName, appToken)
+        airbridgeReady = config.optBoolean("sdkEnabled", true)
     }
 
     private fun isConfigured(appName: String, appToken: String): Boolean {
@@ -37,5 +38,7 @@ class MainApplication : Application() {
 
     companion object {
         private const val TAG = "LuckyGamesAirbridge"
+        var airbridgeReady = false
+            private set
     }
 }

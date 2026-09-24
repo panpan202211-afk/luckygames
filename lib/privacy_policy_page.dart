@@ -1,27 +1,26 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
+import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
-const privacyPolicyEndpoint = 'https://lucky.funnygames365.com/api/privacy';
+import 'privacy_api.dart';
+import 'h5_event_tracker.dart';
+import 'webview_bridge.dart';
 
 Uri parsePrivacyPolicyUrl(String responseBody) {
-  final decoded = jsonDecode(responseBody);
-  if (decoded is! Map<String, dynamic> || decoded['code'].toString() != '0') {
-    throw const FormatException('Privacy API returned an unsuccessful result.');
-  }
-
-  final uri = Uri.tryParse(decoded['url']?.toString() ?? '');
-  if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
-    throw const FormatException('Privacy API returned an invalid HTTPS URL.');
-  }
-  return uri;
+  final result = PrivacyResult.parse(responseBody);
+  return result.url ?? (throw const FormatException('Missing policy URL.'));
 }
 
 class PrivacyPolicyPage extends StatefulWidget {
-  const PrivacyPolicyPage({super.key});
+  const PrivacyPolicyPage({super.key, this.initialUrl, this.fullPage = false});
+
+  final Uri? initialUrl;
+  final bool fullPage;
 
   @override
   State<PrivacyPolicyPage> createState() => _PrivacyPolicyPageState();
@@ -53,44 +52,123 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
     });
 
     try {
-      final response = await _client
-          .get(Uri.parse(privacyPolicyEndpoint))
-          .timeout(const Duration(seconds: 15));
-      if (response.statusCode != 200) {
-        throw http.ClientException(
-          'Privacy API returned HTTP ${response.statusCode}.',
-        );
+      final policyUri =
+          widget.initialUrl ?? (await fetchPrivacyResult(_client)).url;
+      if (policyUri == null) throw const FormatException('Missing policy URL.');
+      requireHttpsUrl(policyUri.toString());
+      if (!mounted) return;
+      final params = WebViewPlatform.instance is WebKitWebViewPlatform
+          ? WebKitWebViewControllerCreationParams(
+              allowsInlineMediaPlayback: true)
+          : const PlatformWebViewControllerCreationParams();
+      final controller = WebViewController.fromPlatformCreationParams(
+        params,
+        // File selection does not need camera/microphone permissions.
+        onPermissionRequest: (request) => request.deny(),
+      );
+      await controller.setJavaScriptMode(JavaScriptMode.unrestricted);
+      await controller.setBackgroundColor(Colors.white);
+      final trackingScript =
+          await rootBundle.loadString('assets/airbridge_bridge.js');
+      var trackingAtDocumentStart = false;
+      WebViewBridge.registerTrackingHandler((message) async {
+        final result = await H5EventTracker.instance.submit(message);
+        if (result != H5TrackingResult.submitted) {
+          debugPrint('H5 tracking: ${result.name}');
+        }
+      });
+      await controller.addJavaScriptChannel(
+        'LuckyAirbridgeEvents',
+        onMessageReceived: (message) async {
+          final result = await H5EventTracker.instance.submit(message.message);
+          // No order IDs, tokens or full event payloads in logs.
+          if (result != H5TrackingResult.submitted) {
+            debugPrint('H5 tracking: ${result.name}');
+          }
+        },
+      );
+      Future<void> installLegacyTrackingScript() async {
+        if (trackingAtDocumentStart || !mounted) return;
+        try {
+          await controller.runJavaScript(trackingScript);
+        } catch (_) {
+          // A navigation may have replaced the JS context; retry at page finish.
+        }
       }
 
-      final policyUri = parsePrivacyPolicyUrl(response.body);
-      final controller = WebViewController()
-        ..setJavaScriptMode(JavaScriptMode.unrestricted)
-        ..setBackgroundColor(Colors.white)
-        ..setNavigationDelegate(
-          NavigationDelegate(
-            onPageStarted: (_) {
-              if (mounted) setState(() => _loadingPage = true);
-            },
-            onPageFinished: (_) {
-              if (mounted) setState(() => _loadingPage = false);
-            },
-            onWebResourceError: (error) {
-              if (error.isForMainFrame == true && mounted) {
-                setState(() {
-                  _loadingPage = false;
-                  _errorMessage = 'Unable to load the privacy policy.';
-                });
-              }
-            },
-            onNavigationRequest: (request) {
-              final uri = Uri.tryParse(request.url);
-              return uri != null &&
-                      (uri.scheme == 'https' || uri.scheme == 'http')
-                  ? NavigationDecision.navigate
-                  : NavigationDecision.prevent;
-            },
-          ),
-        );
+      await controller.setNavigationDelegate(
+        NavigationDelegate(
+          onPageStarted: (_) {
+            unawaited(installLegacyTrackingScript());
+            if (mounted) {
+              setState(() {
+                _loadingPage = true;
+                _errorMessage = null;
+              });
+            }
+          },
+          onPageFinished: (_) {
+            unawaited(installLegacyTrackingScript());
+            if (mounted) setState(() => _loadingPage = false);
+          },
+          onWebResourceError: (error) {
+            if (error.isForMainFrame == true && mounted) {
+              setState(() {
+                _loadingPage = false;
+                _errorMessage = 'Unable to load the privacy policy.';
+              });
+            }
+          },
+          onNavigationRequest: (request) async {
+            switch (classifyWebNavigation(request.url,
+                isMainFrame: request.isMainFrame)) {
+              case WebNavigation.embedded:
+                return NavigationDecision.navigate;
+              case WebNavigation.blocked:
+                return NavigationDecision.prevent;
+              case WebNavigation.externalApp:
+                final result = await WebViewBridge.openExternal(request.url);
+                if (!mounted) return NavigationDecision.prevent;
+                if (!result.opened) {
+                  if (result.fallback != null && request.isMainFrame) {
+                    await controller.loadRequest(result.fallback!);
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text(
+                          'Unable to open this app. It may not be installed.'),
+                    ));
+                  }
+                }
+                return NavigationDecision.prevent;
+            }
+          },
+        ),
+      );
+
+      if (controller.platform case final AndroidWebViewController android) {
+        await android.setAllowContentAccess(true);
+        await android.setGeolocationEnabled(false);
+        await android.setOnShowFileSelector((params) {
+          if (params.mode == FileSelectorMode.save) {
+            return Future.value(<String>[]);
+          }
+          // Ignore capture hints: only select existing files, no camera grant.
+          return WebViewBridge.selectFiles(
+            acceptTypes: params.acceptTypes,
+            multiple: params.mode == FileSelectorMode.openMultiple,
+          );
+        });
+        final cookies =
+            WebViewCookieManager().platform as AndroidWebViewCookieManager;
+        await cookies.setAcceptThirdPartyCookies(android, true);
+        await WebViewBridge.configureAndroidFrames(android.webViewIdentifier);
+        trackingAtDocumentStart = await WebViewBridge.installTrackingScript(
+            android.webViewIdentifier, trackingScript);
+      } else if (controller.platform
+          case final WebKitWebViewController webkit) {
+        trackingAtDocumentStart = await WebViewBridge.installTrackingScript(
+            webkit.webViewIdentifier, trackingScript);
+      }
 
       if (!mounted) return;
       setState(() => _webViewController = controller);
@@ -115,14 +193,18 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Privacy Policy',
-          style: TextStyle(fontWeight: FontWeight.w800),
-        ),
-        centerTitle: true,
-      ),
-      body: Stack(
+      appBar: widget.fullPage
+          ? null
+          : AppBar(
+              title: const Text(
+                'Privacy Policy',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+              centerTitle: true,
+            ),
+      body: SafeArea(
+          child: Stack(
+        fit: StackFit.expand,
         children: [
           if (_webViewController != null)
             WebViewWidget(controller: _webViewController!),
@@ -160,7 +242,7 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
               child: LinearProgressIndicator(minHeight: 3),
             ),
         ],
-      ),
+      )),
     );
   }
 }

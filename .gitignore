@@ -4,6 +4,7 @@
 .packages
 build/
 coverage/
+release-symbols/
 *.iml
 .idea/
 .vscode/

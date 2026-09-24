@@ -1,10 +1,11 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lucky_games/main.dart';
 import 'package:lucky_games/privacy_policy_page.dart';
 
 void main() {
   testWidgets('home page opens the map', (tester) async {
-    await tester.pumpWidget(const LuckyGamesApp());
+    await tester.pumpWidget(const MaterialApp(home: HomePage()));
     expect(find.text('Lucky Games'), findsOneWidget);
     await tester.tap(find.text('PLAY NOW'));
     await tester.pumpAndSettle();
@@ -34,7 +35,7 @@ void main() {
       'https://sites.google.com/view/cashnote3',
     );
     expect(
-      () => parsePrivacyPolicyUrl('{"code":"1","url":"https://x.test"}'),
+      () => parsePrivacyPolicyUrl('{"code":"2","url":"https://x.test"}'),
       throwsFormatException,
     );
   });
