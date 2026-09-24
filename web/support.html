@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Official support page for Lucky Games, a colorful match-3 puzzle adventure.">
+  <meta name="theme-color" content="#ff5278">
+  <title>Lucky Games Support</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #4f3154;
+      --muted: #755f78;
+      --pink: #ff5278;
+      --purple: #8b5cf6;
+      --card: rgba(255, 255, 255, .88);
+      --line: rgba(109, 49, 92, .12);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 10% 10%, rgba(255, 255, 255, .9) 0 4%, transparent 25%),
+        linear-gradient(145deg, #ffbed1 0%, #fff2b7 52%, #bfEfff 100%);
+    }
+
+    a { color: inherit; }
+
+    .shell {
+      width: min(940px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 48px 0 28px;
+    }
+
+    .hero, .card {
+      border: 1px solid rgba(255, 255, 255, .7);
+      background: var(--card);
+      box-shadow: 0 18px 48px rgba(85, 45, 88, .13);
+      backdrop-filter: blur(16px);
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 28px;
+      align-items: center;
+      padding: 34px;
+      border-radius: 32px;
+    }
+
+    .logo {
+      width: 118px;
+      height: 118px;
+      border-radius: 28px;
+      box-shadow: 0 12px 26px rgba(255, 82, 120, .24);
+    }
+
+    h1, h2 { margin: 0; letter-spacing: -.025em; }
+    h1 { font-size: clamp(2.25rem, 6vw, 4rem); line-height: 1; }
+    h2 { font-size: 1.35rem; margin-bottom: 12px; }
+    p { margin: 0; color: var(--muted); line-height: 1.7; }
+
+    .eyebrow {
+      margin-bottom: 10px;
+      color: var(--pink);
+      font-size: .78rem;
+      font-weight: 850;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .tagline { margin-top: 14px; max-width: 590px; font-size: 1.06rem; }
+
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+
+    .button {
+      display: inline-flex;
+      min-height: 46px;
+      align-items: center;
+      justify-content: center;
+      padding: 0 20px;
+      border-radius: 15px;
+      background: var(--pink);
+      color: white;
+      font-weight: 800;
+      text-decoration: none;
+      box-shadow: 0 8px 18px rgba(255, 82, 120, .24);
+    }
+
+    .button.secondary {
+      border: 1px solid var(--line);
+      background: white;
+      color: var(--ink);
+      box-shadow: none;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .card { padding: 26px; border-radius: 24px; }
+    .card.full { grid-column: 1 / -1; }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .feature {
+      padding: 16px;
+      border-radius: 18px;
+      background: linear-gradient(145deg, #fff, #fff8fb);
+      border: 1px solid var(--line);
+    }
+
+    .feature strong { display: block; margin-bottom: 5px; }
+    .feature span { color: var(--muted); font-size: .9rem; line-height: 1.45; }
+
+    details { padding: 14px 0; border-top: 1px solid var(--line); }
+    details:first-of-type { border-top: 0; }
+    summary { cursor: pointer; font-weight: 750; }
+    details p { margin-top: 9px; }
+
+    .contact {
+      color: var(--purple);
+      font-weight: 800;
+      overflow-wrap: anywhere;
+    }
+
+    footer {
+      padding: 24px 8px 0;
+      color: var(--muted);
+      text-align: center;
+      font-size: .85rem;
+    }
+
+    @media (max-width: 680px) {
+      .shell { padding-top: 20px; }
+      .hero { grid-template-columns: 1fr; padding: 25px; text-align: center; }
+      .logo { margin: 0 auto; width: 96px; height: 96px; border-radius: 23px; }
+      .actions { justify-content: center; }
+      .grid { grid-template-columns: 1fr; }
+      .card.full { grid-column: auto; }
+      .features { grid-template-columns: 1fr; }
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .button { transition: transform .18s ease, box-shadow .18s ease; }
+      .button:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(255, 82, 120, .3); }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero" aria-labelledby="page-title">
+      <img class="logo" src="favicon.png" alt="Lucky Games app icon">
+      <div>
+        <div class="eyebrow">Official game support</div>
+        <h1 id="page-title">Lucky Games</h1>
+        <p class="tagline">Swap colorful candies, build powerful combos, and conquer 30 handcrafted levels across three increasingly challenging worlds.</p>
+        <div class="actions">
+          <a class="button" href="mailto:Yeketarecez16@outlook.com?subject=Lucky%20Games%20Support">Contact Support</a>
+          <a class="button secondary" href="#faq">View FAQ</a>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <section class="card full" aria-labelledby="about-title">
+        <h2 id="about-title">About the game</h2>
+        <p>Lucky Games is a cheerful match-3 adventure designed for quick sessions and satisfying progression. Every eliminated candy earns the same base score, while smart four- and five-candy matches unlock power bonuses and the spectacular Sugar Storm.</p>
+        <div class="features">
+          <div class="feature"><strong>Sunny Meadows</strong><span>Learn the rules, create combos, and master your power meter.</span></div>
+          <div class="feature"><strong>Frozen Peaks</strong><span>Reach the score target while breaking every ice-covered tile.</span></div>
+          <div class="feature"><strong>Inferno Citadel</strong><span>Match stars to reset the bomb timer and survive the toughest levels.</span></div>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="help-title">
+        <h2 id="help-title">Need help?</h2>
+        <p>Send us a description of the issue, your device model, operating-system version, and the level where it occurred. Screenshots are welcome.</p>
+        <p style="margin-top: 14px"><a class="contact" href="mailto:Yeketarecez16@outlook.com?subject=Lucky%20Games%20Support">Yeketarecez16@outlook.com</a></p>
+        <p style="margin-top: 8px">We aim to respond to support requests within 3 business days.</p>
+      </section>
+
+      <section class="card" aria-labelledby="tips-title">
+        <h2 id="tips-title">Quick tips</h2>
+        <p>Tap two neighboring candies to swap them. Match at least three of the same design. Four- and five-candy matches award extra power, and a full power meter triggers a Sugar Storm. Your unlocked levels and best star ratings are saved automatically.</p>
+      </section>
+
+      <section class="card full" id="faq" aria-labelledby="faq-title">
+        <h2 id="faq-title">Frequently asked questions</h2>
+        <details>
+          <summary>Why did my swap move back?</summary>
+          <p>A swap is only accepted when it creates a match of three or more candies. Other swaps return to their original positions and do not use a move.</p>
+        </details>
+        <details>
+          <summary>How do I clear ice tiles?</summary>
+          <p>Create a match on an ice-covered position. Frozen Peaks levels are completed only after both the target score and ice objective are cleared.</p>
+        </details>
+        <details>
+          <summary>How does the Inferno timer work?</summary>
+          <p>Every successful move reduces the timer. Include a star candy in a match to restore it before it reaches zero.</p>
+        </details>
+        <details>
+          <summary>Is my progress saved?</summary>
+          <p>Yes. Level unlocks and best star ratings are stored on your device. Removing the app may remove this local progress.</p>
+        </details>
+      </section>
+    </div>
+
+    <footer>
+      <div>Lucky Games Support · Version 1.0.2</div>
+      <div>© 2026 Lucky Games. All rights reserved.</div>
+    </footer>
+  </main>
+</body>
+</html>

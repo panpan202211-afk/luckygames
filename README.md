@@ -94,12 +94,15 @@ AndroidAirbridge.track('purchase', { orderId: 'ORDER-001', value: 19.99, currenc
 
 标准事件参考：[Airbridge Flutter SDK](https://help.airbridge.io/en/developers/flutter-sdk-v4)、[标准事件分类](https://help.airbridge.io/en/developers/airbridge-event)。
 
-The official Airbridge Flutter SDK is initialized on both Android and iOS before Flutter starts. Set the credentials from Airbridge Dashboard **Settings > Tokens** in the root-level `airbridge.json` file:
+The official Airbridge Flutter SDK is configured from the root-level `airbridge.json` file. On iOS 14 and later, the app requests App Tracking Transparency permission and does not initialize or start Airbridge unless the user grants permission. On older iOS versions and Android, platform-specific startup behavior applies.
+
+Set the credentials from Airbridge Dashboard **Settings > Tokens**:
 
 ```json
 {
   "appName": "YOUR_AIRBRIDGE_APP_NAME",
-  "appToken": "YOUR_AIRBRIDGE_APP_SDK_TOKEN"
+  "appToken": "YOUR_AIRBRIDGE_APP_SDK_TOKEN",
+  "autoStartTrackingEnabled": false
 }
 ```
 

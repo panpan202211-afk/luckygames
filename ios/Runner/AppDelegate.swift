@@ -8,15 +8,21 @@ import webview_flutter_wkwebview
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private var webViewChannel: FlutterMethodChannel?
   private var airbridgeReady = false
+  private var hasInitializedAirbridge = false
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    initializeAirbridge()
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
-  private func initializeAirbridge() {
+  @discardableResult
+  func initializeAirbridgeIfNeeded() -> Bool {
+    if hasInitializedAirbridge {
+      return true
+    }
+
     guard
       let url = airbridgeConfigURL(),
       let data = try? Data(contentsOf: url),
@@ -29,12 +35,14 @@ import webview_flutter_wkwebview
       !appToken.hasPrefix("YOUR_")
     else {
       print("[LuckyGamesAirbridge] Credentials are not configured; attribution is disabled.")
-      return
+      return false
     }
 
     AirbridgeFlutter.initializeSDK(name: appName, token: appToken)
     airbridgeReady = (config["sdkEnabled"] as? Bool) != false
+    hasInitializedAirbridge = true
     print("[LuckyGamesAirbridge] SDK initialized for \(appName).")
+    return true
   }
 
   private func airbridgeConfigURL() -> URL? {
